@@ -1,0 +1,212 @@
+#!/bin/bash
+
+# 密钥
+KEY=zZfFZ6mYqS7GWjzYGvwQbWkfer3noTsh
+
+#默认服务器配置项
+#    "服务器名称 端口号 IP地址 登录用户名 登录密码/秘钥文件Key 秘钥文件地址"
+CONFIGS=(
+)
+
+#读取config文件夹中的配置文件
+for file in ./config/*
+do
+    if test -f $file 
+    then
+        decrypt_str=$(openssl enc -aes-256-cbc -d -a -pass pass:$KEY -in $file)
+        CONFIGS+=("$decrypt_str")
+    fi
+done 
+
+#读取自定义服务器配置文件（server_config）列表，合并服务器配置列表
+if [ -f server_config ]; then
+	while read line
+	do
+		CONFIGS+=("$line")
+	done < server_config
+fi
+
+#服务器配置数
+CONFIG_LENGTH=${#CONFIGS[*]}  #配置站点个数
+
+#服务器配置菜单
+function ConfigList(){
+    for ((i=0;i<${CONFIG_LENGTH};i++));
+    do
+        CONFIG=(${CONFIGS[$i]}) #将一维sites字符串赋值到数组
+        serverNum=$(($i+1))
+        echo "(${serverNum}) ${CONFIG[0]}(${CONFIG[2]})"
+    done
+}
+
+#登录菜单
+function LoginMenu(){
+    if [  ! -n $1 ]; then
+        AutoLogin $1
+    else
+        echo "-----------------------------------"
+        echo "-     请输入登录的服务器序号      -"
+        echo "-----------------------------------"
+        echo ""
+        ConfigList
+        echo ""
+        echo "login [arg] 登陆  |  add 增加  |  delete [arg] 删除 "
+        echo ""
+        echo "请输入您选择登录的服务器序号:"
+        echo ""
+    fi
+}
+
+#选择登录的服务器
+function ChooseServer(){
+
+    read commandStr
+
+    echo ""
+
+    #将一维sites字符串赋值到数组
+    commandArray=($commandStr)
+
+    serverCommand=${commandArray[0]}
+    serverNum=${commandArray[1]}
+
+    case "$serverCommand" in
+		login | l )
+            VerifyChooseServerNum $serverNum
+            echo "login......"
+            echo ""
+            AutoLogin $serverNum;
+            return ;
+		;;
+		add |a )
+			echo "add......"
+            echo ""
+            AddConfig ;
+            return ;
+		;;
+		delete | d)
+            VerifyChooseServerNum $serverNum
+			echo "delete......"
+            echo ""
+            DeleteConfig  $serverNum;
+            return ;
+		;;
+		*) 
+            echo "输入的命令不正确，请重新输入:"
+            echo ""
+            ChooseServer ;
+            return ;
+        ;;
+	esac    
+}
+
+#校验输入序号是否正确
+function VerifyChooseServerNum(){
+    serverNum=$1
+
+    if [[ $serverNum -gt $CONFIG_LENGTH ]] ;
+    then
+        echo "输入的序号不正确，请重新输入:"
+        echo ""
+        ChooseServer ;
+        return ;
+    fi
+    if [[ $serverNum -lt 1 ]] ;
+    then
+        echo "输入的序号不正确，请重新输入:"
+        echo ""
+        ChooseServer ;
+        return ;
+    fi
+}
+
+#新增配置
+function AddConfig(){
+
+    echo "请按照如下格式输入"
+    echo "服务器名称 端口号 IP地址 登录用户名 登录密码"
+
+    read serverConfigStr
+
+    serverConfigFileName=$(echo -n ${serverConfigStr} | openssl md5)
+
+    serverConfigFilePath=\./config/${serverConfigFileName}
+
+    echo "${serverConfigStr}" | openssl enc -aes-256-cbc -e -a -pass pass:${KEY} -out ${serverConfigFilePath}
+
+}
+
+#删除配置
+function DeleteConfig(){
+    echo "是否确认操作(yes/no)"
+    echo ""
+    read deleteFlag
+
+    if [ $deleteFlag == "yes" ];
+    then
+        num=$(($1-1))
+
+        serverConfigStr=${CONFIGS[$num]}
+
+        serverConfigFileName=$(echo -n ${serverConfigStr} | openssl md5)
+
+        serverConfigFilePath=\./config/${serverConfigFileName}
+
+        rm -rf ${serverConfigFilePath}
+    
+    elif [ $deleteFlag == "no" ];
+    then
+        ChooseServer ;
+        return ;
+    else
+        DeleteConfig $1 ;
+        return ;
+    fi
+}
+
+#自动登录
+function AutoLogin(){
+
+    num=$(($1-1))
+    CONFIG=(${CONFIGS[$num]})
+    
+    echo "正在登录【${CONFIG[0]}】"
+    echo ""
+
+	command="
+        expect {
+                \"yes/no\" {send \"yes\n\"; exp_continue;}
+                \"*assword\" {set timeout 6000; send \"${CONFIG[4]}\n\";}
+                \"*passphrase\" {set timeout 6000; send \"${CONFIG[4]}\r\n\";}
+                \"Last*\" {  send_user \"\n成功登录【${CONFIG[0]}】\n\";}
+        }
+       interact
+    ";
+   pem=${CONFIG[5]}
+   if [ -n "$pem" ]
+   then
+	expect -c "
+		spawn ssh -p ${CONFIG[1]} -i ${CONFIG[5]} ${CONFIG[3]}@${CONFIG[2]}
+		${command}
+	"
+   else
+	expect -c "
+		spawn ssh -p ${CONFIG[1]} ${CONFIG[3]}@${CONFIG[2]}
+		${command}
+	"
+   fi
+    echo "您已退出【${CONFIG[0]}】"
+
+}
+
+# 程序入口
+if [ 1 == $# ]; then
+    if [ 'list' == $1 ]; then
+        ConfigList
+    else
+        AutoLogin $1
+    fi
+else
+    LoginMenu 
+    ChooseServer 
+fi
