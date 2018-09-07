@@ -1,17 +1,17 @@
 #!/bin/bash
 
-# 密钥
+#密钥
 KEY=zZfFZ6mYqS7GWjzYGvwQbWkfer3noTsh
 
 #默认服务器配置项
-#    "服务器名称 端口号 IP地址 登录用户名 登录密码/秘钥文件Key 秘钥文件地址"
+#    "分组 服务器名称 IP地址 端口号 登录用户名 登录密码/秘钥文件Key 秘钥文件地址"
 CONFIGS=(
 )
 
 #服务器配置数
 CONFIG_LENGTH=0
 
-function RefreshConfig(){
+function RefreshConfig() {
     CONFIGS=(
     )
 
@@ -44,10 +44,18 @@ function ConfigList(){
 
     for ((i=0;i<${CONFIG_LENGTH};i++));
     do
-        CONFIG=(${CONFIGS[$i]}) #将一维sites字符串赋值到数组
+        #将一维sites字符串赋值到数组
+        CONFIG=(${CONFIGS[$i]}) 
         serverNum=$(($i+1))
-        echo "(${serverNum}) ${CONFIG[0]}(${CONFIG[2]})"
+        echo "(${serverNum}) ${CONFIG[0]} | ${CONFIG[1]}(${CONFIG[2]})"
     done
+}
+
+#刷新菜单
+function RefreshMenu() {
+    clear 
+
+    LoginMenu
 }
 
 #登录菜单
@@ -64,14 +72,13 @@ function LoginMenu(){
         echo "login [arg] 登陆  |  add 增加  |  delete [arg] 删除 "
         echo ""
         echo "请按照格式输入操作命令和要操作的服务器序号:"
+        echo "-----------------------------------"
         echo ""
     fi
 }
 
 #选择登录的服务器
 function ChooseServer(){
-    LoginMenu
-
     read commandStr
 
     echo ""
@@ -85,31 +92,27 @@ function ChooseServer(){
     case "$serverCommand" in
 		login | l )
             VerifyChooseServerNum $serverNum
-            echo "login......"
-            echo ""
-            AutoLogin $serverNum;
-            return ;
+            AutoLogin $serverNum
+            return 
 		;;
-		add |a )
-			echo "add......"
-            echo ""
+		add)
             AddConfig
+            RefreshMenu
             ChooseServer
-            return ;
+            return 
 		;;
-		delete | d)
+		delete)
             VerifyChooseServerNum $serverNum
-			echo "delete......"
-            echo ""
-            DeleteConfig  $serverNum;
+            DeleteConfig  $serverNum
+            RefreshMenu
             ChooseServer
-            return ;
+            return 
 		;;
 		*) 
             echo "输入的命令不正确，请重新输入:"
             echo ""
             ChooseServer
-            return ;
+            return 
         ;;
 	esac    
 }
@@ -138,11 +141,14 @@ function VerifyChooseServerNum(){
 function AddConfig(){
 
     echo "请按照如下格式输入"
-    echo "服务器名称 端口号 IP地址 登录用户名 登录密码"
+    echo "分组 服务器名称 IP地址 端口号 登录用户名 登录密码/秘钥文件Key 秘钥文件地址"
 
     read serverConfigStr
 
-    serverConfigFileName=$(echo -n ${serverConfigStr} | openssl md5)
+    #将一维sites字符串赋值到数组
+    serverConfigArray=($serverConfigStr)
+
+    serverConfigFileName=${serverConfigArray[0]}_$(echo -n ${serverConfigStr} | openssl md5)
 
     serverConfigFilePath=\./config/${serverConfigFileName}
 
@@ -161,13 +167,14 @@ function DeleteConfig(){
         num=$(($1-1))
 
         serverConfigStr=${CONFIGS[$num]}
+        serverConfigArray=($serverConfigStr)
 
-        serverConfigFileName=$(echo -n ${serverConfigStr} | openssl md5)
+        serverConfigFileName=${serverConfigArray[0]}_$(echo -n ${serverConfigStr} | openssl md5)
 
         serverConfigFilePath=\./config/${serverConfigFileName}
 
         rm -rf ${serverConfigFilePath}
-    
+
     elif [ $deleteFlag == "no" ];
     then
         return ;
@@ -178,37 +185,38 @@ function DeleteConfig(){
 }
 
 #自动登录
+#分组 服务器名称 IP地址 端口号 登录用户名 登录密码/秘钥文件Key 秘钥文件地址
 function AutoLogin(){
 
     num=$(($1-1))
     CONFIG=(${CONFIGS[$num]})
     
-    echo "正在登录【${CONFIG[0]}】"
+    echo "正在登录【${CONFIG[0]} | ${CONFIG[1]}】"
     echo ""
 
 	command="
         expect {
                 \"yes/no\" {send \"yes\n\"; exp_continue;}
-                \"*assword\" {set timeout 6000; send \"${CONFIG[4]}\n\";}
-                \"*passphrase\" {set timeout 6000; send \"${CONFIG[4]}\r\n\";}
-                \"Last*\" {  send_user \"\n成功登录【${CONFIG[0]}】\n\";}
+                \"*assword\" {set timeout 6000; send \"${CONFIG[5]}\n\";}
+                \"*passphrase\" {set timeout 6000; send \"${CONFIG[5]}\r\n\";}
+                \"Last*\" {  send_user \"\n成功登录【${CONFIG[0]} | ${CONFIG[1]}】\n\";}
         }
        interact
     ";
-   pem=${CONFIG[5]}
+   pem=${CONFIG[6]}
    if [ -n "$pem" ]
    then
 	expect -c "
-		spawn ssh -p ${CONFIG[1]} -i ${CONFIG[5]} ${CONFIG[3]}@${CONFIG[2]}
+		spawn ssh -p ${CONFIG[3]} -i ${CONFIG[6]} ${CONFIG[4]}@${CONFIG[2]}
 		${command}
 	"
    else
 	expect -c "
-		spawn ssh -p ${CONFIG[1]} ${CONFIG[3]}@${CONFIG[2]}
+		spawn ssh -p ${CONFIG[3]} ${CONFIG[4]}@${CONFIG[2]}
 		${command}
 	"
    fi
-    echo "您已退出【${CONFIG[0]}】"
+    echo "您已退出【${CONFIG[0]} | ${CONFIG[1]}】"
 
 }
 
