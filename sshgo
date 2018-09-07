@@ -8,29 +8,40 @@ KEY=zZfFZ6mYqS7GWjzYGvwQbWkfer3noTsh
 CONFIGS=(
 )
 
-#读取config文件夹中的配置文件
-for file in ./config/*
-do
-    if test -f $file 
-    then
-        decrypt_str=$(openssl enc -aes-256-cbc -d -a -pass pass:$KEY -in $file)
-        CONFIGS+=("$decrypt_str")
-    fi
-done 
-
-#读取自定义服务器配置文件（server_config）列表，合并服务器配置列表
-if [ -f server_config ]; then
-	while read line
-	do
-		CONFIGS+=("$line")
-	done < server_config
-fi
-
 #服务器配置数
-CONFIG_LENGTH=${#CONFIGS[*]}  #配置站点个数
+CONFIG_LENGTH=0
+
+function RefreshConfig(){
+    CONFIGS=(
+    )
+
+    #读取config文件夹中的配置文件
+    for file in ./config/*
+    do
+        if test -f $file 
+        then
+            decrypt_str=$(openssl enc -aes-256-cbc -d -a -pass pass:$KEY -in $file)
+            CONFIGS+=("$decrypt_str")
+        fi
+    done 
+
+    #读取自定义服务器配置文件（server_config）列表，合并服务器配置列表
+    if [ -f server_config ]; then
+        while read line
+        do
+            CONFIGS+=("$line")
+        done < server_config
+    fi
+
+    #服务器配置数
+    CONFIG_LENGTH=${#CONFIGS[*]}
+}
 
 #服务器配置菜单
 function ConfigList(){
+
+    RefreshConfig
+
     for ((i=0;i<${CONFIG_LENGTH};i++));
     do
         CONFIG=(${CONFIGS[$i]}) #将一维sites字符串赋值到数组
@@ -52,13 +63,14 @@ function LoginMenu(){
         echo ""
         echo "login [arg] 登陆  |  add 增加  |  delete [arg] 删除 "
         echo ""
-        echo "请输入您选择登录的服务器序号:"
+        echo "请按照格式输入操作命令和要操作的服务器序号:"
         echo ""
     fi
 }
 
 #选择登录的服务器
 function ChooseServer(){
+    LoginMenu
 
     read commandStr
 
@@ -81,7 +93,8 @@ function ChooseServer(){
 		add |a )
 			echo "add......"
             echo ""
-            AddConfig ;
+            AddConfig
+            ChooseServer
             return ;
 		;;
 		delete | d)
@@ -89,12 +102,13 @@ function ChooseServer(){
 			echo "delete......"
             echo ""
             DeleteConfig  $serverNum;
+            ChooseServer
             return ;
 		;;
 		*) 
             echo "输入的命令不正确，请重新输入:"
             echo ""
-            ChooseServer ;
+            ChooseServer
             return ;
         ;;
 	esac    
@@ -156,7 +170,6 @@ function DeleteConfig(){
     
     elif [ $deleteFlag == "no" ];
     then
-        ChooseServer ;
         return ;
     else
         DeleteConfig $1 ;
