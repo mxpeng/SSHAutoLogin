@@ -1,7 +1,11 @@
 #!/bin/bash
 
 #密钥
-KEY=zZfFZ6mYqS7GWjzYGvwQbWkfer3noTsh
+KEY=xxxxxx
+
+#配置文件文件路径
+CONFIG_DIR=/usr/local/etc/sshgo/config
+
 
 #默认服务器配置项
 #    "分组 服务器名称 IP地址 端口号 登录用户名 登录密码/秘钥文件Key 秘钥文件地址"
@@ -16,7 +20,7 @@ function RefreshConfig() {
     )
 
     #读取config文件夹中的配置文件
-    for file in ./config/*
+    for file in $CONFIG_DIR/*
     do
         if test -f $file 
         then
@@ -143,13 +147,11 @@ function AddConfig(){
 
     serverConfigFileName=${serverConfigArray[0]}_$(echo -n ${serverConfigStr} | openssl md5)
 
-    serverConfigDir=\./config
-
-    if [ ! -x $serverConfigDir ]; then 
-        mkdir -p $serverConfigDir
+    if [ ! -x $CONFIG_DIR ]; then 
+        mkdir -p $CONFIG_DIR
     fi
 
-    serverConfigFilePath=${serverConfigDir}/${serverConfigFileName}
+    serverConfigFilePath=${CONFIG_DIR}/${serverConfigFileName}
 
     echo "${serverConfigStr}" | openssl enc -aes-256-cbc -e -a -pass pass:${KEY} -out ${serverConfigFilePath}
 
@@ -170,7 +172,7 @@ function DeleteConfig(){
 
         serverConfigFileName=${serverConfigArray[0]}_$(echo -n ${serverConfigStr} | openssl md5)
 
-        serverConfigFilePath=\./config/${serverConfigFileName}
+        serverConfigFilePath=${CONFIG_DIR}/${serverConfigFileName}
 
         rm -rf ${serverConfigFilePath}
 
