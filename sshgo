@@ -25,22 +25,12 @@ function RefreshConfig() {
         fi
     done 
 
-    #读取自定义服务器配置文件（server_config）列表，合并服务器配置列表
-    if [ -f server_config ]; then
-        while read line
-        do
-            CONFIGS+=("$line")
-        done < server_config
-    fi
-
     #服务器配置数
     CONFIG_LENGTH=${#CONFIGS[*]}
 }
 
 #服务器配置菜单
 function ConfigList(){
-
-    RefreshConfig
 
     for ((i=0;i<${CONFIG_LENGTH};i++));
     do
@@ -54,6 +44,8 @@ function ConfigList(){
 #刷新菜单
 function RefreshMenu() {
     clear 
+
+    RefreshConfig
 
     LoginMenu
 }
@@ -71,7 +63,7 @@ function LoginMenu(){
         echo ""
         echo "login [arg] 登陆  |  add 增加  |  delete [arg] 删除 "
         echo ""
-        echo "请按照格式输入操作命令和要操作的服务器序号:"
+        echo "请输入操作命令和要操作的服务器序号:"
         echo "-----------------------------------"
         echo ""
     fi
@@ -142,6 +134,7 @@ function AddConfig(){
 
     echo "请按照如下格式输入"
     echo "分组 服务器名称 IP地址 端口号 登录用户名 登录密码/秘钥文件Key 秘钥文件地址"
+    echo ""
 
     read serverConfigStr
 
@@ -150,7 +143,13 @@ function AddConfig(){
 
     serverConfigFileName=${serverConfigArray[0]}_$(echo -n ${serverConfigStr} | openssl md5)
 
-    serverConfigFilePath=\./config/${serverConfigFileName}
+    serverConfigDir=\./config
+
+    if [ ! -x $serverConfigDir ]; then 
+        mkdir -p $serverConfigDir
+    fi
+
+    serverConfigFilePath=${serverConfigDir}/${serverConfigFileName}
 
     echo "${serverConfigStr}" | openssl enc -aes-256-cbc -e -a -pass pass:${KEY} -out ${serverConfigFilePath}
 
@@ -223,11 +222,14 @@ function AutoLogin(){
 # 程序入口
 if [ 1 == $# ]; then
     if [ 'list' == $1 ]; then
+        RefreshConfig
         ConfigList
     else
+        RefreshConfig
         AutoLogin $1
     fi
 else
+    RefreshConfig
     LoginMenu 
     ChooseServer 
 fi
