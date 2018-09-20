@@ -41,7 +41,7 @@ function ConfigList(){
         #将一维sites字符串赋值到数组
         CONFIG=(${CONFIGS[$i]}) 
         serverNum=$(($i+1))
-        echo "(${serverNum}) ${CONFIG[0]} | ${CONFIG[1]}(${CONFIG[2]})"
+        echo "(${serverNum}) ${CONFIG[0]} | ${CONFIG[1]} [${CONFIG[2]}:${CONFIG[3]}] [${CONFIG[4]}]"
     done
 }
 
@@ -56,6 +56,9 @@ function RefreshMenu() {
 
 #登录菜单
 function LoginMenu(){
+
+    echo -ne "\033]0; 【sshgo】  \007"
+
     if [  ! -n $1 ]; then
         AutoLogin $1
     else
@@ -194,6 +197,8 @@ function AutoLogin(){
     
     echo "正在登录【${CONFIG[0]} | ${CONFIG[1]}】"
     echo ""
+
+    echo -ne "\033]0; 【${CONFIG[0]} | ${CONFIG[1]}】  \007"
 
 	command="
         expect {
