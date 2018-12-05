@@ -100,12 +100,14 @@ function LoginMenu(){
         echo "1) 输入服务器 id 直接登录"
         echo "2）输入 add 按照提升增加服务器"
         echo "3）输入 delete [id] 删除服务器"
-        echo "----------------------------------------------------------------------"
+        echo "4）输入 exit 获取 q 退出"
+        echo ""
+        echo "---------------------------------------------------------------------------------------------"
         echo ""
         ConfigList
         echo ""
         echo "请输入操作命令和要操作的服务器序号:"
-        echo "----------------------------------------------------------------------"
+        echo "---------------------------------------------------------------------------------------------"
         echo ""
     fi
 }
@@ -130,6 +132,7 @@ function ChooseServer(){
     case "$serverCommand" in
 		login | l )
             VerifyChooseServerNum $serverNum
+            clear
             AutoLogin $serverNum
             return 
 		;;
@@ -145,6 +148,9 @@ function ChooseServer(){
             RefreshMenu
             ChooseServer
             return 
+		;;
+        exit | q)
+            clear
 		;;
 		*) 
             echo "输入的命令不正确，请重新输入:"
@@ -261,7 +267,11 @@ function AutoLogin(){
 		${command}
 	"
    fi
+
+    clear
     echo "您已退出【${CONFIG[0]} | ${CONFIG[1]}】"
+    LoginMenu 
+    ChooseServer 
 
 }
 
