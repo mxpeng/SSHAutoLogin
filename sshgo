@@ -94,6 +94,7 @@ function LoginMenu(){
     if [  ! -n $1 ]; then
         AutoLogin $1
     else
+        echo ""
         echo "   `hostname`, 欢迎使用sshgo"
         echo ""
         echo "1) 输入服务器 id 直接登录"
@@ -265,6 +266,7 @@ function AutoLogin(){
 }
 
 # 程序入口
+clear
 if [ 1 == $# ]; then
     if [ 'list' == $1 ]; then
         RefreshConfig
