@@ -40,8 +40,40 @@ function ConfigList(){
     do
         #将一维sites字符串赋值到数组
         CONFIG=(${CONFIGS[$i]}) 
+
         serverNum=$(($i+1))
-        echo "(${serverNum}) ${CONFIG[0]} | ${CONFIG[1]} [${CONFIG[2]}:${CONFIG[3]}] [${CONFIG[4]}]"
+        if [ $serverNum -lt 10 ];then
+            serverNum="0$serverNum"
+        fi
+
+        serverGroup=${CONFIG[0]}
+        serverName=${CONFIG[1]}
+        serverIp=${CONFIG[2]}
+        serverPort=${CONFIG[3]}
+        serverUser=${CONFIG[4]}
+
+       
+        for ((j=`echo $serverGroup | wc -L`;j<8;j++));do 
+            serverGroup="$serverGroup "
+        done
+        
+        for ((j=`echo $serverName | wc -L`;j<20;j++));do 
+            serverName="$serverName "
+        done
+
+        for ((j=`echo $serverIp | wc -L`;j<20;j++));do 
+            serverIp="$serverIp "
+        done
+
+        for ((j=`echo $serverPort | wc -L`;j<10;j++));do 
+            serverPort="$serverPort "
+        done
+
+        for ((j=`echo $serverUser | wc -L`;j<15;j++));do 
+            serverUser="$serverUser "
+        done
+        
+        echo "${serverNum} | $serverGroup | ${serverNum} | $serverName $serverIp $serverPort $serverUser"
     done
 }
 
@@ -62,16 +94,17 @@ function LoginMenu(){
     if [  ! -n $1 ]; then
         AutoLogin $1
     else
-        echo "-----------------------------------"
-        echo "-     请输入登录的服务器序号      -"
-        echo "-----------------------------------"
+        echo "   `hostname`, 欢迎使用sshgo"
+        echo ""
+        echo "1) 输入服务器 id 直接登录"
+        echo "2）输入 add 按照提升增加服务器"
+        echo "3）输入 delete [id] 删除服务器"
+        echo "----------------------------------------------------------------------"
         echo ""
         ConfigList
         echo ""
-        echo "login [arg] 登陆  |  add 增加  |  delete [arg] 删除 "
-        echo ""
         echo "请输入操作命令和要操作的服务器序号:"
-        echo "-----------------------------------"
+        echo "----------------------------------------------------------------------"
         echo ""
     fi
 }
@@ -81,6 +114,11 @@ function ChooseServer(){
     read commandStr
 
     echo ""
+
+    # 如果 commandStr 匹配  [0-9]+
+    if [[ "$commandStr" =~ [0-9]+ ]];then
+        commandStr="login $commandStr"
+    fi
 
     #将一维sites字符串赋值到数组
     commandArray=($commandStr)
