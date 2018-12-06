@@ -15,7 +15,7 @@ CONFIGS=(
 # 服务器配置数
 CONFIG_LENGTH=0
 
-function RefreshConfig() {
+function refresh_config() {
     CONFIGS=(
     )
 
@@ -34,7 +34,7 @@ function RefreshConfig() {
 }
 
 # 服务器配置菜单
-function ConfigList() {
+function config_list() {
 
     for (( i = 0; i < ${CONFIG_LENGTH}; i ++ ));
     do
@@ -79,21 +79,21 @@ function ConfigList() {
 }
 
 # 刷新菜单
-function RefreshMenu() {
+function refresh_menu() {
     clear
 
-    RefreshConfig
+    refresh_config
 
-    LoginMenu
+    login_menu
 }
 
 # 登录菜单
-function LoginMenu() {
+function login_menu() {
     # 修改窗口标题
     echo -ne "\033]0; 【sshgo】  \007"
 
     if [ ! -n $1 ]; then
-        AutoLogin $1
+        auto_login $1
     else
         echo ""
         echo "   `hostname`, 欢迎使用sshgo"
@@ -105,7 +105,7 @@ function LoginMenu() {
         echo ""
         echo "---------------------------------------------------------------------------------------------"
         echo ""
-        ConfigList
+        config_list
         echo ""
         echo "请输入操作命令和要操作的服务器序号:"
         echo "---------------------------------------------------------------------------------------------"
@@ -114,7 +114,7 @@ function LoginMenu() {
 }
 
 # 选择登录的服务器
-function ChooseServer() {
+function choose_server() {
     read command_str
 
     echo ""
@@ -132,22 +132,22 @@ function ChooseServer() {
 
     case "$server_command" in
         login | l)
-            VerifyChooseServerNum ${server_num}
+            verify_choose_server_num ${server_num}
             clear
-            AutoLogin ${server_num}
+            auto_login ${server_num}
             return
         ;;
         add)
-            AddConfig
-            RefreshMenu
-            ChooseServer
+            add_confiig
+            refresh_menu
+            choose_server
             return
         ;;
         delete)
-            VerifyChooseServerNum ${server_num}
-            DeleteConfig ${server_num}
-            RefreshMenu
-            ChooseServer
+            verify_choose_server_num ${server_num}
+            delete_config ${server_num}
+            refresh_menu
+            choose_server
             return
         ;;
         exit | q)
@@ -156,34 +156,34 @@ function ChooseServer() {
         *)
             echo "输入的命令不正确，请重新输入:"
             echo ""
-            ChooseServer
+            choose_server
             return
         ;;
     esac
 }
 
 # 校验输入序号是否正确
-function VerifyChooseServerNum() {
+function verify_choose_server_num() {
     server_num=$1
 
     if [[ ${server_num} -gt ${CONFIG_LENGTH} ]];
     then
         echo "输入的序号不正确，请重新输入:"
         echo ""
-        ChooseServer;
+        choose_server;
         return;
     fi
     if [[ ${server_num} -lt 1 ]];
     then
         echo "输入的序号不正确，请重新输入:"
         echo ""
-        ChooseServer;
+        choose_server;
         return;
     fi
 }
 
 # 新增配置
-function AddConfig() {
+function add_confiig() {
 
     echo "请按照如下格式输入"
     echo "分组 服务器名称 IP地址 端口号 登录用户名 登录密码/秘钥文件Key 秘钥文件地址"
@@ -207,7 +207,7 @@ function AddConfig() {
 }
 
 # 删除配置
-function DeleteConfig() {
+function delete_config() {
     echo "是否确认操作(yes/no)"
     echo ""
     read delete_flag
@@ -227,14 +227,14 @@ function DeleteConfig() {
     elif [ ${delete_flag} == "no" ]; then
         return;
     else
-        DeleteConfig $1;
+        delete_config $1;
         return;
     fi
 }
 
 # 自动登录
 # 分组 服务器名称 IP地址 端口号 登录用户名 登录密码/秘钥文件Key 秘钥文件地址
-function AutoLogin() {
+function auto_login() {
 
     num=$(($1 - 1))
     config=( ${CONFIGS[$num]} )
@@ -270,8 +270,8 @@ function AutoLogin() {
 
     clear
     echo "您已退出【${config[0]} | ${config[1]}】"
-    LoginMenu
-    ChooseServer
+    login_menu
+    choose_server
 
 }
 
@@ -279,14 +279,14 @@ function AutoLogin() {
 clear
 if [ 1 == $# ]; then
     if [ 'list' == $1 ]; then
-        RefreshConfig
-        ConfigList
+        refresh_config
+        config_list
     else
-        RefreshConfig
-        AutoLogin $1
+        refresh_config
+        auto_login $1
     fi
 else
-    RefreshConfig
-    LoginMenu
-    ChooseServer
+    refresh_config
+    login_menu
+    choose_server
 fi
