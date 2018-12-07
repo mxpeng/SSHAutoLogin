@@ -92,7 +92,7 @@ function login_menu() {
     # 修改窗口标题
     echo -ne "\033]0; 【sshgo】  \007"
 
-    if [ ! -n $1 ]; then
+    if [[ -n $1 ]]; then
         auto_login $1
     else
         echo ""
@@ -138,7 +138,7 @@ function choose_server() {
             return
         ;;
         add)
-            add_confiig
+            add_config
             refresh_menu
             choose_server
             return
@@ -183,7 +183,7 @@ function verify_choose_server_num() {
 }
 
 # 新增配置
-function add_confiig() {
+function add_config() {
 
     echo "请按照如下格式输入"
     echo "分组 服务器名称 IP地址 端口号 登录用户名 登录密码/秘钥文件Key 秘钥文件地址"
@@ -196,7 +196,7 @@ function add_confiig() {
 
     server_config_file_name=${server_config_array[0]}_`echo -n ${server_config_str} | openssl md5`
 
-    if [ ! -x ${CONFIG_DIR} ]; then
+    if [[ ! -d ${CONFIG_DIR} ]]; then
         mkdir -p ${CONFIG_DIR}
     fi
 
@@ -212,7 +212,7 @@ function delete_config() {
     echo ""
     read delete_flag
 
-    if [ ${delete_flag} == "yes" ]; then
+    if [[ ${delete_flag} == "yes" ]]; then
         num=$(($1 - 1))
 
         server_config_str=${CONFIGS[$num]}
@@ -224,7 +224,7 @@ function delete_config() {
 
         rm -rf ${server_config_file_path}
 
-    elif [ ${delete_flag} == "no" ]; then
+    elif [[ ${delete_flag} == "no" ]]; then
         return;
     else
         delete_config $1;
@@ -255,7 +255,7 @@ function auto_login() {
        interact
     ";
     pem=${config[6]}
-    if [ -n "$pem" ]
+    if [[ -n "$pem" ]]
     then
         expect -c "
 		spawn ssh -p ${config[3]} -i ${config[6]} ${config[4]}@${config[2]}
@@ -277,8 +277,8 @@ function auto_login() {
 
 # 程序入口
 clear
-if [ 1 == $# ]; then
-    if [ 'list' == $1 ]; then
+if [[ 1 == $# ]]; then
+    if [[ 'list' == $1 ]]; then
         refresh_config
         config_list
     else
