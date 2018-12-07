@@ -92,36 +92,38 @@ function login_menu() {
     # 修改窗口标题
     echo -ne "\033]0; 【sshgo】  \007"
 
-    if [[ -n $1 ]]; then
-        auto_login $1
-    else
-        echo ""
-        echo "   `hostname`, 欢迎使用sshgo"
-        echo ""
-        echo "1) 输入服务器 id 直接登录"
-        echo "2）输入 add 按照提升增加服务器"
-        echo "3）输入 delete [id] 删除服务器"
-        echo "4）输入 exit 获取 q 退出"
-        echo ""
-        echo "---------------------------------------------------------------------------------------------"
-        echo ""
-        config_list
-        echo ""
-        echo "请输入操作命令和要操作的服务器序号:"
-        echo "---------------------------------------------------------------------------------------------"
-        echo ""
-    fi
+    echo ""
+    echo "   `hostname`, 欢迎使用sshgo"
+    echo ""
+    echo "1) 输入 [id]              登录服务器"
+    echo "2）输入 add               按照提示增加服务器"
+    echo "3）输入 delete [id]       删除服务器"
+    echo "4）输入 q | exit          退出"
+    echo "4）输入 r | refresh       刷新列表"
+    echo "5）输入 d | download [id] 下载服务器文件到本地"
+    echo "6）输入 u | upload   [id] 上传本地文件到服务器"
+    echo ""
+    echo "---------------------------------------------------------------------------------------------"
+    echo ""
+    config_list
+    echo ""
+
+
 }
 
 # 选择登录的服务器
 function choose_server() {
+    echo "请输入操作命令或要操作的服务器序号:"
+    echo "---------------------------------------------------------------------------------------------"
+    echo ""
+
     read command_str
 
     echo ""
 
-    # 如果 command_str 匹配  [0-9]+
-    if [[ "${command_str}" =~ [0-9]+ ]]; then
-        command_str="login ${command_str}"
+    # 如果 command_str 匹配  ^[0-9]+
+    if [[ ${command_str} =~ ^[0-9]+ ]]; then
+        command_str="login $command_str"
     fi
 
     #将一维字符串赋值到数组
@@ -133,49 +135,60 @@ function choose_server() {
     case "$server_command" in
         login | l)
             verify_choose_server_num ${server_num}
-            clear
             auto_login ${server_num}
-            return
+            login_menu
+            choose_server
         ;;
         add)
             add_config
             refresh_menu
             choose_server
-            return
         ;;
         delete)
             verify_choose_server_num ${server_num}
             delete_config ${server_num}
             refresh_menu
             choose_server
-            return
+        ;;
+        d | download)
+            verify_choose_server_num ${server_num}
+            auto_scp_download ${server_num}
+            choose_server
+        ;;
+        u | upload)
+            verify_choose_server_num ${server_num}
+            auto_scp_upload ${server_num}
+            choose_server
+        ;;
+        r | refresh)
+            refresh_menu
+            choose_server
         ;;
         exit | q)
             clear
         ;;
         *)
-            echo "输入的命令不正确，请重新输入:"
+            echo "输入的命令不正确"
             echo ""
             choose_server
-            return
         ;;
     esac
 }
 
-# 校验输入序号是否正确
+# 校验输入序号是否正确 []<-(server_num:int)
 function verify_choose_server_num() {
     server_num=$1
 
     if [[ ${server_num} -gt ${CONFIG_LENGTH} ]];
     then
-        echo "输入的序号不正确，请重新输入:"
+        echo "输入的序号不正确"
         echo ""
         choose_server;
         return;
     fi
     if [[ ${server_num} -lt 1 ]];
     then
-        echo "输入的序号不正确，请重新输入:"
+        echo "输入的序号不正确"
         echo ""
         choose_server;
         return;
@@ -206,7 +219,7 @@ function add_config() {
 
 }
 
-# 删除配置
+# 删除配置 []<-(server_num:int)
 function delete_config() {
     echo "是否确认操作(yes/no)"
     echo ""
@@ -232,7 +245,93 @@ function delete_config() {
     fi
 }
 
-# 自动登录
+# 下载文件 []<-(server_num:int)
+function auto_scp_download() {
+    echo "请按照如下格式输入"
+    echo "服务器文件路径 本地存储路径"
+    echo ""
+    read down_file_path
+
+    if [[ -z ${down_file_path} ]]; then
+        echo "输入为空"
+        return
+    fi
+
+    down_file_path_array=( ${down_file_path} )
+
+    if [[ ${#down_file_path_array[*]} -ne 2 ]]; then
+        echo "输入错误"
+        return
+    fi
+
+    server_file_path=${down_file_path_array[0]}
+    local_file_path=${down_file_path_array[1]}
+
+    num=$(($1 - 1))
+    config=( ${CONFIGS[$num]} )
+
+    command="
+        expect {
+                \"yes/no\" {send \"yes\n\"; exp_continue;}
+                \"*assword\" {set timeout 6000; send \"${config[5]}\n\";}
+                \"*passphrase\" {set timeout 6000; send \"${config[5]}\r\n\";}
+                \"Last*\" {  send_user \"\n成功登录【${config[0]} | ${config[1]}】\n\";}
+        }
+       interact
+    ";
+
+    pem=${config[6]}
+    if [[ -n ${pem} ]]; then
+        expect -c "spawn scp -P ${config[3]} -i ${config[6]} ${config[4]}@${config[2]}:${server_file_path} ${local_file_path} ${command}"
+    else
+        expect -c "spawn scp -P ${config[3]} ${config[4]}@${config[2]}:${server_file_path} ${local_file_path} ${command} "
+    fi
+}
+
+# 上传文件 []<-(server_num:int)
+function auto_scp_upload() {
+    echo "请按照如下格式输入"
+    echo "本地文件路径 服务器存储路径"
+    echo ""
+    read upload_file_path
+
+    if [[ -z ${upload_file_path} ]]; then
+        echo "输入为空"
+        return
+    fi
+
+    upload_file_path_array=( ${upload_file_path} )
+
+    if [[ ${#upload_file_path_array[*]} -ne 2 ]]; then
+        echo "输入错误"
+        return
+    fi
+
+    server_file_path=${upload_file_path_array[1]}
+    local_file_path=${upload_file_path_array[0]}
+
+    num=$(($1 - 1))
+    config=( ${CONFIGS[$num]} )
+
+    command="
+        expect {
+                \"yes/no\" {send \"yes\n\"; exp_continue;}
+                \"*assword\" {set timeout 6000; send \"${config[5]}\n\";}
+                \"*passphrase\" {set timeout 6000; send \"${config[5]}\r\n\";}
+                \"Last*\" {  send_user \"\n成功登录【${config[0]} | ${config[1]}】\n\";}
+        }
+       interact
+    ";
+
+    pem=${config[6]}
+    if [[ -n ${pem} ]]; then
+        expect -c "spawn scp -P ${config[3]} -i ${config[6]} ${local_file_path} ${config[4]}@${config[2]}:${server_file_path} ${command}"
+    else
+        expect -c "spawn scp -P ${config[3]} ${local_file_path} ${config[4]}@${config[2]}:${server_file_path} ${command} "
+    fi
+}
+
+# 自动登录 []<-(server_num:int)
 # 分组 服务器名称 IP地址 端口号 登录用户名 登录密码/秘钥文件Key 秘钥文件地址
 function auto_login() {
 
@@ -255,23 +354,14 @@ function auto_login() {
        interact
     ";
     pem=${config[6]}
-    if [[ -n "$pem" ]]
-    then
-        expect -c "
-		spawn ssh -p ${config[3]} -i ${config[6]} ${config[4]}@${config[2]}
-		${command}
-	"
+    if [[ -n ${pem} ]]; then
+        expect -c "spawn ssh -p ${config[3]} -i ${config[6]} ${config[4]}@${config[2]} ${command}"
     else
-        expect -c "
-		spawn ssh -p ${config[3]} ${config[4]}@${config[2]}
-		${command}
-	"
+        expect -c "spawn ssh -p ${config[3]} ${config[4]}@${config[2]} ${command} "
     fi
 
     clear
     echo "您已退出【${config[0]} | ${config[1]}】"
-    login_menu
-    choose_server
 
 }
 
