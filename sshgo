@@ -338,6 +338,9 @@ function auto_login() {
     num=$(($1 - 1))
     config=( ${CONFIGS[$num]} )
     mfa_code=$(curl -s http://localhost:17304/code/${config[4]})
+    if [[ ${mfa_code} = "key does not exists!" ]]; then
+        mfa_code=""
+    fi
 
     echo "正在登录【${config[0]} | ${config[1]}】"
     echo ""
